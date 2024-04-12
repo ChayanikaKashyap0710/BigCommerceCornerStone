@@ -276,12 +276,11 @@
 
 <div class="combo-product" id="combo-product" style="display: none;">
     <div>
-        <span class="total-head">Combo Total:</span>
+        <span class="total-head">Total:</span>
         <span class="combo-total"></span>
     </div>
     <h1>Add Ons:</h1>
     <button class="myButton" id="add-to-cart-button" onclick="add_to_cart()">Add To Cart</button>
-</div>
 </div>
 
 <div id="previewModal" class="modal modal--large" data-reveal>
@@ -367,7 +366,7 @@
                 chk.setAttribute("onchange", "changeFunction()");
             var label = document.createElement('label');
                 label.htmlFor = productDetails[i].node.sku;
-                label.appendChild(document.createTextNode(productDetails[i].node.name+" -₹. "+productDetails[i].node.prices.price.value));
+                label.appendChild(document.createTextNode(productDetails[i].node.name+" - ₹"+productDetails[i].node.prices.price.value.toFixed(2)));
         fieldset.appendChild(chk); 
         fieldset.appendChild(label);
        document.getElementById("combo-product").appendChild(fieldset);
@@ -398,13 +397,13 @@ function add_to_cart(){
         var product_id_list = $this.attr("id");
         removeData.push(product_id_list.replace("checkbox",""));
     });
-    console.log(removeData);
-    cartUrl= "https://skill-test.mybigcommerce.com/cart.php";
+    cartUrl= "http://localhost:3000/cart.php";
     for (let i=0; i<removeData.length; i++) {
+        console.log(`/cart.php?action=add&sku=${removeData[i]}&qty=1`);
             $.ajax({
                 type: 'GET',
                 async: false,
-                url: cartUrl+'?action=add&sku='+removeData[i]+'&ajaxsubmit=1',
+                url: `/cart.php?action=add&sku=${removeData[i]}&qty=1`,
                 success: function(data){
                     console.log("SUCCESS");
                 }
