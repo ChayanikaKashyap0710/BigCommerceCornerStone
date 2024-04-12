@@ -274,8 +274,143 @@
     </article>
 </div>
 
+<div class="combo-product" id="combo-product" style="display: none;">
+    <div>
+        <span class="total-head">Combo Total:</span>
+        <span class="combo-total"></span>
+    </div>
+    <h1>Add Ons:</h1>
+    <button class="myButton" id="add-to-cart-button" onclick="add_to_cart()">Add To Cart</button>
+</div>
+</div>
+
 <div id="previewModal" class="modal modal--large" data-reveal>
     {{> components/common/modal/modal-close-btn }}
     <div class="modal-content"></div>
     <div class="loadingOverlay"></div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script type = "text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+    var custom = [];
+    {{#each product.custom_fields}}
+    {{#if name '==' "upsell_products"}}
+        custom.push({'name':"{{name}}",'value':"{{value}}"});
+        {{/if}}
+    {{/each}}
+        if(custom.length > 0){
+            $("#combo-product").css('display', 'block');
+            for(let i=0;i<custom.length; i++){
+                fetch('/graphql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer {{settings.storefront_api.token}}',
+                },
+                body: JSON.stringify({query: `
+                query SingleProduct {
+                  site {
+                    products (entityIds:${custom[i].value}) {
+                      edges {
+                        node {
+                          id
+                          sku
+                           variants(first: 100) {
+                                edges {
+                                  node {
+                                    sku
+                                  }
+                                }
+                              }
+                          entityId
+                          name
+                          images {
+                            edges {
+                              node {
+                                url(width: 500, height: 500)
+                              }
+                            }
+                          }
+                          prices {
+                            price {
+                              value
+                              currencyCode
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                `})
+                }).then(function(response) {
+                    return response.json();
+                    console.log(response);
+                }).then(function(response){
+                    var productDetails = response.data.site.products.edges;
+                    return convertJsontoDiv(productDetails);
+                });
+            }
+        }
+    function convertJsontoDiv(productDetails){
+    for (var i=0; i<productDetails.length; i++) {
+            var fieldset = document.createElement('fieldset');
+            var chk = document.createElement('input');
+                chk.setAttribute('type', 'checkbox');
+                chk.setAttribute('id', 'checkbox'+productDetails[i].node.sku);
+                chk.setAttribute('value', productDetails[i].node.prices.price.value);
+                chk.setAttribute('name', 'product_list');
+                chk.setAttribute("onchange", "changeFunction()");
+            var label = document.createElement('label');
+                label.htmlFor = productDetails[i].node.sku;
+                label.appendChild(document.createTextNode(productDetails[i].node.name+" -₹. "+productDetails[i].node.prices.price.value));
+        fieldset.appendChild(chk); 
+        fieldset.appendChild(label);
+       document.getElementById("combo-product").appendChild(fieldset);
+    }
+}
+var priceWithoutTax = $('.price--withoutTax').text();
+function changeFunction(){
+    var productTotal = Number(priceWithoutTax.replace("₹", ""));
+    var checkboxes = document.getElementsByName("product_list");
+    checkboxes.forEach(function(checkbox) {
+        if (checkbox.checked) {
+            productTotal += Number(checkbox.value);
+        } else {
+            productTotal = productTotal;
+        }
+    });
+    
+    $(".combo-total").text("₹"+productTotal.toFixed(2))
+
+}
+$(".combo-total").text(priceWithoutTax)
+function add_to_cart(){
+    var removeData=[];
+    removeData.push("{{product.sku}}");
+    cartUrl= "https://skill-test.mybigcommerce.com/cart.php";
+    $("input:checkbox[name=product_list]:checked").each(function(){
+        var $this = $(this);
+        var product_id_list = $this.attr("id");
+        removeData.push(product_id_list.replace("checkbox",""));
+    });
+    console.log(removeData);
+    cartUrl= "https://skill-test.mybigcommerce.com/cart.php";
+    for (let i=0; i<removeData.length; i++) {
+            $.ajax({
+                type: 'GET',
+                async: false,
+                url: cartUrl+'?action=add&sku='+removeData[i]+'&ajaxsubmit=1',
+                success: function(data){
+                    console.log("SUCCESS");
+                }
+            });
+    }
+       window.open(cartUrl);
+}
+
+</script>
